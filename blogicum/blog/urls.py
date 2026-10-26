@@ -15,7 +15,11 @@ urlpatterns = [
         views.category_posts,
         name='category_posts'
     ),
-    path('profile/edit/', views.edit_profile, name='edit_profile'),
+    path(
+        'profile/<str:username>/edit/',
+        views.edit_profile,
+        name='edit_profile'
+    ),
     path('profile/<str:username>/', views.profile, name='profile'),
     path(
         'posts/<int:post_id>/comment/',

@@ -1,12 +1,9 @@
 from django import forms
-from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 
-from .models import Comment, Post
+from .models import Comment, Post, User
 from .moderation import is_toxic
 from core.constants import MODERATION_ERROR
-
-User = get_user_model()
 
 
 class ProfileEditForm(forms.ModelForm):
@@ -20,11 +17,11 @@ class PostForm(forms.ModelForm):
 
     class Meta:
         model = Post
-        fields = ('title', 'text', 'pub_date', 'location', 'category', 'image')
+        exclude = ('author',)
         widgets = {
-            'pub_date': forms.DateInput(
-                format='%Y-%m-%d',
-                attrs={'type': 'date'},
+            'pub_date': forms.DateTimeInput(
+                format='%Y-%m-%dT%H:%M',
+                attrs={'type': 'datetime-local'},
             )
         }
 

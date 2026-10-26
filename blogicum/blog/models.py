@@ -20,12 +20,10 @@ class PublishedModel(models.Model):
 
     class Meta:
         abstract = True
-        verbose_name = 'базовая сущность'
-        verbose_name_plural = 'Базовые сущности'
 
     def __str__(self):
-        status = 'Опубликовано' if self.is_published else 'Скрыто'
-        return f'{status}. Создано: {self.created_at}'
+        status = 'опубликовано' if self.is_published else 'скрыто'
+        return f'{status}, создано {self.created_at}'
 
 
 class Category(PublishedModel):
@@ -39,11 +37,12 @@ class Category(PublishedModel):
     )
 
     class Meta(PublishedModel.Meta):
+        ordering = ('title',)
         verbose_name = 'категория'
         verbose_name_plural = 'Категории'
 
     def __str__(self):
-        return self.title
+        return self.title[:MAX_PREVIEW_LENGTH]
 
 
 class Location(PublishedModel):
@@ -58,11 +57,12 @@ class Location(PublishedModel):
     )
 
     class Meta(PublishedModel.Meta):
+        ordering = ('name',)
         verbose_name = 'местоположение'
         verbose_name_plural = 'Местоположения'
 
     def __str__(self):
-        return self.name
+        return self.name[:MAX_PREVIEW_LENGTH]
 
 
 class Post(PublishedModel):
@@ -98,18 +98,13 @@ class Post(PublishedModel):
     )
 
     class Meta:
-        ordering = ('-pub_date',)
+        ordering = ('-pub_date', '-created_at')
         verbose_name = 'публикация'
         verbose_name_plural = 'Публикации'
         default_related_name = 'posts'
 
     def __str__(self):
-        abbreviated_title = (
-            self.title[:MAX_PREVIEW_LENGTH] + '...'
-            if len(self.title) > MAX_PREVIEW_LENGTH
-            else self.title
-        )
-        return f'{self.pk}.\u00A0{abbreviated_title}'
+        return f'{self.pk}. {self.title[:MAX_PREVIEW_LENGTH]}'
 
 
 class Comment(models.Model):
@@ -134,3 +129,6 @@ class Comment(models.Model):
         verbose_name = 'комментарий'
         verbose_name_plural = 'Комментарии'
         default_related_name = 'comments'
+
+    def __str__(self):
+        return f'{self.pk}. {self.text[:MAX_PREVIEW_LENGTH]}'
