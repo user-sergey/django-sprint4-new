@@ -1,7 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Count
-from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -10,23 +9,29 @@ from blog.models import Category, Comment, Post, User
 from core.constants import POSTS_BY_PAGE
 
 
-def get_posts(posts=Post.objects, only_published=True, with_annotations=True):
-    posts_queryset = posts.select_related('author', 'location', 'category')
+def get_posts(
+    posts=Post.objects,
+    only_published=True,
+    with_relations=True,
+    with_annotations=True
+):
+    if with_relations:
+        posts = posts.select_related('author', 'location', 'category')
     if with_annotations:
-        posts_queryset = posts_queryset.annotate(
+        posts = posts.annotate(
             comment_count=Count('comments')
-        ).order_by('-pub_date', '-created_at')
+        ).order_by(*Post._meta.ordering)
     if only_published:
-        posts_queryset = posts_queryset.filter(
+        posts = posts.filter(
             is_published__exact=True,
             category__is_published__exact=True,
             pub_date__lte=timezone.now()
         )
-    return posts_queryset
+    return posts
 
 
-def paginate_posts(request, queryset, posts_per_page=POSTS_BY_PAGE):
-    paginator = Paginator(queryset, posts_per_page)
+def paginate_posts(request, posts, posts_per_page=POSTS_BY_PAGE):
+    paginator = Paginator(posts, posts_per_page)
     page_number = request.GET.get('page')
     return paginator.get_page(page_number)
 
@@ -37,14 +42,9 @@ def index(request):
 
 
 def post_detail(request, post_id):
-    post = get_object_or_404(
-        get_posts(only_published=False, with_annotations=False),
-        id=post_id
-    )
+    post = get_object_or_404(Post, id=post_id)
     if request.user != post.author:
-        published_posts = get_posts(with_annotations=False)
-        if not published_posts.filter(id=post_id).exists():
-            raise Http404
+        post = get_object_or_404(get_posts(with_annotations=False), id=post_id)
     return render(
         request,
         'blog/detail.html',
@@ -62,7 +62,7 @@ def category_posts(request, category_slug):
         is_published__exact=True,
         slug=category_slug
     )
-    posts = get_posts(posts=category.posts, only_published=True)
+    posts = get_posts(posts=category.posts)
     return render(
         request,
         'blog/category.html',
@@ -84,9 +84,7 @@ def profile(request, username):
 
 
 @login_required
-def edit_profile(request, username):
-    if request.user.username != username:
-        return redirect('blog:profile', username)
+def edit_profile(request):
     form = ProfileEditForm(request.POST or None, instance=request.user)
     if not form.is_valid():
         return render(request, 'blog/user.html', {'form': form})
